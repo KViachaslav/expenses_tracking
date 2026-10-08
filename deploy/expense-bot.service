@@ -1,0 +1,32 @@
+# Telegram-бот «Семейные расходы» (aiogram 3) для systemd.
+#
+# Установка на Raspberry Pi (пути/пользователя подставьте свои):
+#   sudo cp deploy/expense-bot.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now expense-bot
+#   sudo systemctl status expense-bot
+#
+# Без BOT_TOKEN в .env сервис завершится с понятной ошибкой
+# («BOT_TOKEN не задан…»), см. README.md.
+
+[Unit]
+Description=Expense Tracker Bot (aiogram)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=slava
+Group=slava
+WorkingDirectory=/home/slava/expense-tracker
+Environment="PATH=/home/slava/expense-tracker/venv/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="PYTHONUNBUFFERED=1"
+EnvironmentFile=-/home/slava/expense-tracker/.env
+ExecStart=/home/slava/expense-tracker/venv/bin/python -m app.bot.main
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

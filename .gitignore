@@ -1,0 +1,33 @@
+# --- Секреты ---
+.env
+NOTES.local.md
+*.local.md
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# --- Данные приложения ---
+data/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite3
+backups/
+
+# --- Логи (например, validate_bot.log от devcheck_bot.py) ---
+*.log
+
+# --- IDE / OS ---
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

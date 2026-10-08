@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Семья · {{ app_title }}{% endblock %}
+
+{% block content %}
+<h1>Семья <span class="muted">· {{ month_title }}</span></h1>
+<p class="sub">Траты по членам семьи за месяц. Данные собирает Telegram-бот, веб-страница только показывает.</p>
+
+<section class="panel">
+  <form method="get" action="/users" class="inline">
+    <div class="field">
+      <label for="month">Месяц</label>
+      <select id="month" name="month">
+        {% for value in available %}
+          <option value="{{ value }}"{% if value == month %} selected{% endif %}>{{ month_label(value) }}</option>
+        {% endfor %}
+        {% if month not in available %}
+          <option value="{{ month }}" selected>{{ month_title }}</option>
+        {% endif %}
+      </select>
+    </div>
+    <button type="submit">Показать</button>
+    <a class="btn btn-ghost" href="/reports?start={{ summary.start.isoformat() }}&end={{ summary.end.isoformat() }}">Подробный отчёт →</a>
+  </form>
+</section>
+
+<section class="cards">
+  <div class="card">
+    <div class="label">Всего за месяц</div>
+    <div class="value">{{ money(summary.total) }}</div>
+    <div class="hint">{{ summary.count }} {{ plural(summary.count, ('трата', 'траты', 'трат')) }}</div>
+  </div>
+  <div class="card">
+    <div class="label">В среднем в день</div>
+    <div class="value">{{ money(summary.avg_per_day) }}</div>
+    <div class="hint">за {{ summary.days }} дн. месяца</div>
+  </div>
+  <div class="card">
+    <div class="label">Участников с тратами</div>
+    <div class="value">{{ rows|length }}</div>
+    <div class="hint">учтены все, кто писал боту</div>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Кто сколько потратил</h2>
+  {% if rows %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Кто</th><th class="num">Сумма</th><th class="num">Доля</th>
+            <th class="num">Трат</th><th class="num">К прошлому месяцу</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in rows %}
+            <tr>
+              <td class="nowrap">{{ item.display_name }}</td>
+              <td class="num">{{ money(item.total) }}</td>
+              <td class="num">{{ percent(item.share, decimals=1) }}</td>
+              <td class="num">{{ item.count }}</td>
+              <td class="num">
+                {% set before = previous.get(item.id) %}
+                {% if before %}
+                  {% set diff = item.total - before %}
+                  {% if diff > 0 %}+{% endif %}{{ percent(diff / before * 100, decimals=1) }}
+                {% else %}
+                  <span class="muted">—</span>
+                {% endif %}
+              </td>
+            </tr>
+            <tr>
+              <td colspan="5" style="padding-top:0">
+                <div class="bar"><i style="width: {{ [item.share, 100]|min }}%"></i></div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td>Итого</td>
+            <td class="num">{{ money(summary.total) }}</td>
+            <td class="num">100%</td>
+            <td class="num">{{ summary.count }}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <p class="sub">Прошлый месяц: {{ month_label(previous_month) }}{% if not previous %} — трат не было{% endif %}.</p>
+  {% else %}
+    <p class="empty">В базе нет пользователей: они появляются после /start в боте.</p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>Наглядно</h2>
+  <div class="chart-box"><canvas id="users" aria-label="Траты по членам семьи"></canvas></div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var DATA = {{ chart_json|safe }};
+  var currency = "{{ currency }}";
+  var palette = ["#3b6ef5", "#1f9d55", "#d99a12", "#d64545", "#7a5af8",
+                 "#00a3a3", "#e8590c", "#5c7cfa", "#20c997", "#f06595"];
+  var box = document.querySelector(".chart-box");
+
+  if (typeof Chart === "undefined") {
+    if (box) {
+      box.innerHTML = '<p class="empty">Графики недоступны: положите chart.umd.min.js в ' +
+        'app/web/static/ или разрешите доступ к CDN.</p>';
+    }
+    return;
+  }
+  if (!DATA.values.length) {
+    if (box) { box.innerHTML = '<p class="empty">За этот месяц трат нет.</p>'; }
+    return;
+  }
+
+  new Chart(document.getElementById("users"), {
+    type: "bar",
+    data: {
+      labels: DATA.labels,
+      datasets: [{ data: DATA.values, backgroundColor: palette, borderRadius: 6 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              return Number(ctx.parsed.y).toLocaleString("ru-RU", { maximumFractionDigits: 2 }) +
+                " " + currency;
+            }
+          }
+        }
+      },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+})();
+</script>
+{% endblock %}

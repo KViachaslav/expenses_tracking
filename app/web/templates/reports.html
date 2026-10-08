@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block title %}Отчёты · {{ app_title }}{% endblock %}
+
+{% block content %}
+<h1>Отчёты</h1>
+<p class="sub">{{ date_ru(summary.start) }} — {{ date_ru(summary.end) }} · {{ summary.days }} дн.</p>
+
+<section class="panel">
+  <h2>Период</h2>
+  <form method="get" action="/reports" class="inline">
+    <div class="field small">
+      <label for="start">С даты</label>
+      <input type="date" id="start" name="start" value="{{ filters.start.isoformat() }}">
+    </div>
+    <div class="field small">
+      <label for="end">По дату</label>
+      <input type="date" id="end" name="end" value="{{ filters.end.isoformat() }}">
+    </div>
+    <div class="field">
+      <label for="category">Категория</label>
+      <select id="category" name="category">
+        <option value="">Все категории</option>
+        {% for item in categories %}
+          <option value="{{ item.id }}"{% if filters.category_id == item.id %} selected{% endif %}>{{ item.title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="user">Кто потратил</label>
+      <select id="user" name="user">
+        <option value="">Все</option>
+        {% for item in users %}
+          <option value="{{ item.id }}"{% if filters.user_id == item.id %} selected{% endif %}>{{ item.display_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field small">
+      <label for="months">Месяцев в динамике</label>
+      <select id="months" name="months">
+        {% for value in [3, 6, 12, 24] %}
+          <option value="{{ value }}"{% if months == value %} selected{% endif %}>{{ value }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit">Построить</button>
+  </form>
+  <p class="sub">
+    <a href="/reports/export.csv?start={{ filters.start.isoformat() }}&end={{ filters.end.isoformat() }}&category={{ filters.category_id or '' }}&user={{ filters.user_id or '' }}">Скачать CSV (Excel)</a>
+  </p>
+</section>
+
+<section class="cards">
+  <div class="card">
+    <div class="label">Итого за период</div>
+    <div class="value">{{ money(summary.total) }}</div>
+    <div class="hint">{{ summary.count }} {{ plural(summary.count, ('трата', 'траты', 'трат')) }}</div>
+  </div>
+  <div class="card">
+    <div class="label">В среднем в день</div>
+    <div class="value">{{ money(summary.avg_per_day) }}</div>
+    <div class="hint">за {{ summary.days }} дн. периода</div>
+  </div>
+  <div class="card">
+    <div class="label">Предыдущий отрезок</div>
+    <div class="value">{{ money(comparison.previous_total) }}</div>
+    <div class="hint">
+      {% if comparison.delta_percent is not none %}
+        {{ percent(comparison.delta_percent, decimals=1) }} к прошлому
+      {% else %}
+        нет данных для сравнения
+      {% endif %}
+    </div>
+  </div>
+  <div class="card{% if comparison.delta > 0 %} bad{% elif comparison.delta < 0 %} good{% endif %}">
+    <div class="label">Изменение</div>
+    <div class="value">{% if comparison.delta > 0 %}+{% endif %}{{ money(comparison.delta) }}</div>
+    <div class="hint">к предыдущему отрезку такой же длины</div>
+  </div>
+</section>
+
+<section class="grid-2">
+  <div class="panel">
+    <h2>По категориям</h2>
+    {% if by_category %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Категория</th><th class="num">Сумма</th><th class="num">Доля</th><th class="num">Трат</th></tr>
+          </thead>
+          <tbody>
+            {% for item in by_category %}
+              <tr>
+                <td class="nowrap">{{ item.title }}</td>
+                <td class="num">{{ money(item.total) }}</td>
+                <td class="num">{{ percent(item.share, decimals=1) }}</td>
+                <td class="num">{{ item.count }}</td>
+              </tr>
+              <tr>
+                <td colspan="4" style="padding-top:0">
+                  <div class="bar"><i style="width: {{ [item.share, 100]|min }}%"></i></div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr class="total-row">
+              <td>Итого</td>
+              <td class="num">{{ money(summary.total) }}</td>
+              <td class="num">100%</td>
+              <td class="num">{{ summary.count }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    {% else %}
+      <p class="empty">Нет данных за период.</p>
+    {% endif %}
+  </div>
+
+  <div class="panel">
+    <h2>По членам семьи</h2>
+    {% if by_user %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Кто</th><th class="num">Сумма</th><th class="num">Доля</th><th class="num">Трат</th></tr>
+          </thead>
+          <tbody>
+            {% for item in by_user %}
+              <tr>
+                <td class="nowrap">{{ item.display_name }}</td>
+                <td class="num">{{ money(item.total) }}</td>
+                <td class="num">{{ percent(item.share, decimals=1) }}</td>
+                <td class="num">{{ item.count }}</td>
+              </tr>
+              <tr>
+                <td colspan="4" style="padding-top:0">
+                  <div class="bar"><i style="width: {{ [item.share, 100]|min }}%"></i></div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="empty">В базе ещё нет пользователей — они появляются после /start в боте.</p>
+    {% endif %}
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Динамика по месяцам (последние {{ months }})</h2>
+  {% if by_month %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Месяц</th><th class="num">Сумма</th><th class="num">Трат</th><th class="num">Средний чек</th></tr>
+        </thead>
+        <tbody>
+          {% for item in by_month %}
+            <tr>
+              <td class="nowrap">{{ month_label(item.month) }}</td>
+              <td class="num">{{ money(item.total) }}</td>
+              <td class="num">{{ item.count }}</td>
+              <td class="num">{{ money(item.total / item.count) if item.count else '—' }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="empty">Пока нет ни одного месяца с тратами.</p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>По дням периода</h2>
+  {% if daily %}
+    <table>
+      <thead>
+        <tr><th>Дата</th><th class="num">Сумма</th><th class="num">Трат</th><th class="num">Средний чек</th></tr>
+      </thead>
+      <tbody>
+        {% for item in daily %}
+          <tr>
+            <td class="nowrap">{{ date_ru(item.day) }}</td>
+            <td class="num">{{ money(item.total) }}</td>
+            <td class="num">{{ item.count }}</td>
+            <td class="num">{{ money(item.total / item.count) if item.count else '—' }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr class="total-row">
+          <td>Итого</td>
+          <td class="num">{{ money(summary.total) }}</td>
+          <td class="num">{{ summary.count }}</td>
+          <td class="num">{{ money(summary.total / summary.count) if summary.count else '—' }}</td>
+        </tr>
+      </tfoot>
+    </table>
+    <p class="sub">Показаны только дни с тратами — {{ daily|length }} из {{ summary.days }}.</p>
+  {% else %}
+    <p class="empty">За выбранный период трат нет.</p>
+  {% endif %}
+</section>
+
+
+{% endblock %}

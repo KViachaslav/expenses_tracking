@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}Траты · {{ app_title }}{% endblock %}
+
+{% block content %}
+<h1>Траты</h1>
+<p class="sub">
+  Период: {{ date_ru(filters.start) }} — {{ date_ru(filters.end) }} ·
+  по фильтру набрано <b>{{ money(total) }}</b>
+</p>
+
+<section class="panel">
+  <h2>Фильтры</h2>
+  <form method="get" action="/expenses" class="inline">
+    <div class="field small">
+      <label for="start">С даты</label>
+      <input type="date" id="start" name="start" value="{{ filters.start.isoformat() }}">
+    </div>
+    <div class="field small">
+      <label for="end">По дату</label>
+      <input type="date" id="end" name="end" value="{{ filters.end.isoformat() }}">
+    </div>
+    <div class="field">
+      <label for="category">Категория</label>
+      <select id="category" name="category">
+        <option value="">Все категории</option>
+        {% for item in categories %}
+          <option value="{{ item.id }}"{% if filters.category_id == item.id %} selected{% endif %}>{{ item.title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="user">Кто потратил</label>
+      <select id="user" name="user">
+        <option value="">Все</option>
+        {% for item in users %}
+          <option value="{{ item.id }}"{% if filters.user_id == item.id %} selected{% endif %}>{{ item.display_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="search">Поиск по комментарию</label>
+      <input type="text" id="search" name="search" value="{{ filters.search or '' }}" placeholder="хлеб">
+    </div>
+    <button type="submit">Показать</button>
+    <a class="btn btn-ghost" href="/expenses">Сбросить</a>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>Добавить трату вручную</h2>
+  {% if users and categories %}
+    <form method="post" action="/expenses" class="inline">
+      <input type="hidden" name="back" value="{{ request.url.path }}{% if request.url.query %}?{{ request.url.query }}{% endif %}">
+      <div class="field small">
+        <label for="amount">Сумма</label>
+        <input type="number" step="0.01" min="0.01" id="amount" name="amount" required placeholder="500">
+      </div>
+      <div class="field">
+        <label for="new_category">Категория</label>
+        <select id="new_category" name="category_id" required>
+          {% for item in categories if item.is_active %}
+            <option value="{{ item.id }}">{{ item.title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="new_user">Кто</label>
+        <select id="new_user" name="user_id" required>
+          {% for item in users %}
+            <option value="{{ item.id }}">{{ item.display_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field small">
+        <label for="spent_at">Дата</label>
+        <input type="date" id="spent_at" name="spent_at" value="{{ default_date.isoformat() }}">
+      </div>
+      <div class="field">
+        <label for="comment">Комментарий</label>
+        <input type="text" id="comment" name="comment" placeholder="необязательно">
+      </div>
+      <button type="submit">Добавить</button>
+    </form>
+    <p class="sub">Обычно быстрее написать боту: «500 продукты хлеб и молоко».</p>
+  {% else %}
+    <p class="empty">
+      Нет категорий или членов семьи: запустите бота и отправьте ему /start —
+      после этого здесь появится форма ручного ввода.
+    </p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>Найдено: {{ rows|length }}{% if has_next %} (показаны первые {{ table_limit }}){% endif %}</h2>
+  {% if rows %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Дата и время</th><th>Категория</th><th>Кто</th>
+            <th>Комментарий</th><th class="num">Сумма</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in rows %}
+            <tr>
+              <td class="nowrap">{{ datetime_ru(item.spent_at) }}</td>
+              <td class="nowrap">{{ item.category.title if item.category else '—' }}</td>
+              <td class="nowrap">{{ item.user.display_name if item.user else '—' }}</td>
+              <td class="comment">{{ item.comment or '—' }}</td>
+              <td class="num">{{ money(item.amount, item.currency) }}</td>
+              <td class="right nowrap">
+                <form method="post" action="/expenses/{{ item.id }}/delete"
+                      onsubmit="return confirm('Удалить трату {{ amount(item.amount) }} {{ item.currency }}?');">
+                  <input type="hidden" name="back" value="{{ request.url.path }}{% if request.url.query %}?{{ request.url.query }}{% endif %}">
+                  <button class="btn-danger btn-mini" type="submit">Удалить</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td colspan="4">Итого по фильтру</td>
+            <td class="num">{{ money(total) }}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  {% else %}
+    <p class="empty">За выбранный период трат нет.</p>
+  {% endif %}
+
+  {% set query = 'start=' ~ filters.start.isoformat() ~ '&end=' ~ filters.end.isoformat()
+     ~ '&category=' ~ (filters.category_id or '') ~ '&user=' ~ (filters.user_id or '')
+     ~ '&search=' ~ (filters.search|urlencode if filters.search else '') %}
+  <div class="pager">
+    {% if page > 1 %}
+      <a class="btn btn-ghost" href="/expenses?{{ query }}&page={{ page - 1 }}">← Предыдущая</a>
+    {% endif %}
+    <span class="muted">страница {{ page }}</span>
+    {% if has_next %}
+      <a class="btn btn-ghost" href="/expenses?{{ query }}&page={{ page + 1 }}">Следующая →</a>
+    {% endif %}
+  </div>
+</section>
+
+{% endblock %}

@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+{% block title %}Дашборд · {{ app_title }}{% endblock %}
+
+{% block content %}
+<h1>Дашборд <span class="muted">· {{ month_title }}</span></h1>
+<p class="sub">До конца месяца осталось {{ days_left }} дн. · валюта {{ currency }}</p>
+
+<section class="cards">
+  <div class="card">
+    <div class="label">Сегодня</div>
+    <div class="value">{{ money(today_summary.total) }}</div>
+    <div class="hint">
+      {{ today_summary.count }} {{ plural(today_summary.count, ('трата', 'траты', 'трат')) }}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="label">За месяц</div>
+    <div class="value">{{ money(month_summary.total) }}</div>
+    <div class="hint">
+      {% if comparison.delta_percent is not none %}
+        {% if comparison.delta > 0 %}+{% endif %}{{ percent(comparison.delta_percent, decimals=1) }}
+        к прошлому месяцу
+      {% else %}
+        {{ month_summary.count }} {{ plural(month_summary.count, ('трата', 'траты', 'трат')) }}
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="label">В среднем в день</div>
+    <div class="value">{{ money(month_summary.avg_per_day) }}</div>
+    <div class="hint">за {{ month_summary.days }} дн. периода</div>
+  </div>
+
+  <div class="card{% if budget_state != 'none' %} {{ budget_state }}{% endif %}">
+    <div class="label">Остаток бюджета</div>
+    {% if overall %}
+      <div class="value">{{ money(overall.remaining) }}</div>
+      <div class="hint">из {{ money(overall.limit_amount) }} · {{ percent(overall.percent, decimals=1) }}</div>
+    {% else %}
+      <div class="value muted">—</div>
+      <div class="hint">лимит на месяц не задан</div>
+    {% endif %}
+  </div>
+</section>
+
+<section class="grid-2">
+  <div class="panel">
+    <h2>Траты за последние 30 дней</h2>
+    <div class="chart-box"><canvas id="trend" aria-label="График трат по дням"></canvas></div>
+  </div>
+  <div class="panel">
+    <h2>Категории за {{ month_title }}</h2>
+    <div class="chart-box"><canvas id="categories" aria-label="Доли категорий"></canvas></div>
+  </div>
+</section>
+
+<section class="grid-2">
+  <div class="panel">
+    <h2>Топ-5 категорий месяца</h2>
+    <div class="chart-box"><canvas id="top" aria-label="Топ категорий"></canvas></div>
+  </div>
+  <div class="panel">
+    <h2>Динамика по месяцам</h2>
+    <div class="chart-box"><canvas id="months" aria-label="Суммы по месяцам"></canvas></div>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>🎯 Бюджеты на {{ month_title }}</h2>
+  {% if progress %}
+    {% for item in progress %}
+      {% set state = 'bad' if item.over else ('warn' if item.percent >= 80 else 'good') %}
+      <div class="budget-row">
+        <div class="line">
+          <span>{{ item.title }}</span>
+          <span class="nowrap">{{ money(item.spent) }} / {{ money(item.limit_amount) }}</span>
+        </div>
+        <div class="bar {{ state }}"><i style="width: {{ [item.percent, 100]|min }}%"></i></div>
+        <div class="muted">
+          {% if item.over %}
+            превышение на {{ money(-item.remaining) }}
+          {% else %}
+            осталось {{ money(item.remaining) }}
+          {% endif %}
+          · {{ percent(item.percent, decimals=1) }}
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <p class="empty">Лимиты на этот месяц не заданы — заполните форму ниже.</p>
+  {% endif %}
+
+  <h2>Изменить лимиты</h2>
+  <form method="post" action="/budgets" class="inline">
+    <input type="hidden" name="month" value="{{ month }}">
+    <input type="hidden" name="back" value="/">
+    <div class="field small">
+      <label for="limit_overall">Всё вместе</label>
+      <input type="number" step="0.01" min="0" id="limit_overall" name="limit_overall"
+             value="{{ overall_limit if overall_limit is not none else '' }}">
+    </div>
+    {% for category in categories %}
+      <div class="field small">
+        <label for="limit_{{ category.id }}">{{ category.title }}</label>
+        <input type="number" step="0.01" min="0" id="limit_{{ category.id }}"
+               name="limit_{{ category.id }}" value="{{ limits.get(category.id, '') }}">
+      </div>
+    {% endfor %}
+    <button type="submit">Сохранить</button>
+  </form>
+  <p class="sub">Пустое поле или 0 — лимит удаляется.</p>
+</section>
+
+<section class="panel">
+  <h2>Последние траты</h2>
+  {% if recent %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Дата и время</th><th>Категория</th><th>Кто</th>
+            <th>Комментарий</th><th class="num">Сумма</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in recent %}
+            <tr>
+              <td class="nowrap">{{ datetime_ru(item.spent_at) }}</td>
+              <td class="nowrap">{{ item.category.title if item.category else '—' }}</td>
+              <td class="nowrap">{{ item.user.display_name if item.user else '—' }}</td>
+              <td class="comment">{{ item.comment or '—' }}</td>
+              <td class="num">{{ money(item.amount, item.currency) }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="sub"><a href="/expenses">Все траты и удаление →</a></p>
+  {% else %}
+    <p class="empty">Трат пока нет. Напишите боту «500 продукты хлеб» — запись появится здесь.</p>
+  {% endif %}
+</section>
+
+<!-- == DASHBOARD SCRIPTS == -->
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var DATA = {{ chart_json|safe }};
+  var currency = "{{ currency }}";
+  var palette = ["#3b6ef5", "#1f9d55", "#d99a12", "#d64545", "#7a5af8",
+                 "#00a3a3", "#e8590c", "#5c7cfa", "#20c997", "#f06595"];
+
+  if (typeof Chart === "undefined") {
+    document.querySelectorAll(".chart-box").forEach(function (box) {
+      box.innerHTML = '<p class="empty">Графики недоступны: положите chart.umd.min.js в ' +
+        'app/web/static/ или разрешите доступ к CDN.</p>';
+    });
+    return;
+  }
+
+  var fmt = function (value) {
+    return Number(value).toLocaleString("ru-RU", { maximumFractionDigits: 2 });
+  };
+
+  Chart.defaults.font.family = "'Segoe UI', Roboto, Arial, sans-serif";
+  Chart.defaults.color = "#6b7590";
+
+  var trend = document.getElementById("trend");
+  if (trend) {
+    new Chart(trend, {
+      type: "line",
+      data: {
+        labels: DATA.trend.labels,
+        datasets: [{
+          label: "Сумма, " + currency,
+          data: DATA.trend.values,
+          borderColor: palette[0],
+          backgroundColor: "rgba(59,110,245,.14)",
+          fill: true, tension: .3, borderWidth: 2, pointRadius: 2
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: function (ctx) { return fmt(ctx.parsed.y) + " " + currency; } } }
+        },
+        scales: { y: { beginAtZero: true, ticks: { callback: fmt } } }
+      }
+    });
+  }
+
+  var categories = document.getElementById("categories");
+  if (categories) {
+    if (!DATA.categories.values.length) {
+      categories.parentNode.innerHTML = '<p class="empty">За текущий месяц трат нет.</p>';
+    } else {
+      new Chart(categories, {
+        type: "doughnut",
+        data: {
+          labels: DATA.categories.labels,
+          datasets: [{ data: DATA.categories.values, backgroundColor: palette, borderWidth: 0 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, cutout: "58%",
+          plugins: {
+            legend: { position: "right", labels: { boxWidth: 12 } },
+            tooltip: { callbacks: { label: function (ctx) { return ctx.label + ": " + fmt(ctx.parsed) + " " + currency; } } }
+          }
+        }
+      });
+    }
+  }
+
+  var top = document.getElementById("top");
+  if (top) {
+    new Chart(top, {
+      type: "bar",
+      data: {
+        labels: DATA.top.labels,
+        datasets: [{ data: DATA.top.values, backgroundColor: palette, borderRadius: 6 }]
+      },
+      options: {
+        indexAxis: "y", responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: function (ctx) { return fmt(ctx.parsed.x) + " " + currency; } } }
+        },
+        scales: { x: { beginAtZero: true, ticks: { callback: fmt } } }
+      }
+    });
+  }
+
+  var months = document.getElementById("months");
+  if (months) {
+    new Chart(months, {
+      type: "bar",
+      data: {
+        labels: DATA.months.labels,
+        datasets: [{ data: DATA.months.values, backgroundColor: palette[5], borderRadius: 6 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: function (ctx) { return fmt(ctx.parsed.y) + " " + currency; } } }
+        },
+        scales: { y: { beginAtZero: true, ticks: { callback: fmt } } }
+      }
+    });
+  }
+
+})();
+</script>
+{% endblock %}
+

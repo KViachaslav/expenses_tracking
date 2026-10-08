@@ -1,0 +1,13 @@
+# Файлы, которые попадают на Linux/RPi, обязаны иметь LF-переводы строк:
+# CRLF ломает shebang bash-скриптов и директивы systemd (ExecStart, EnvironmentFile).
+* text=auto eol=lf
+
+*.sh text eol=lf
+*.service text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.ini text eol=lf
+*.example text eol=lf
+
+*.png binary
+*.db binary

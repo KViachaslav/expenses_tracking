@@ -1,0 +1,33 @@
+# Веб-интерфейс «Семейные расходы» (FastAPI + uvicorn) для systemd.
+#
+# Установка на Raspberry Pi (пути/пользователя подставьте свои):
+#   sudo cp deploy/expense-web.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now expense-web
+#   sudo systemctl status expense-web
+#
+# Подробности — README.md, раздел «Развёртывание на Raspberry Pi».
+
+[Unit]
+Description=Expense Tracker Web (FastAPI + uvicorn)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=slava
+Group=slava
+WorkingDirectory=/home/slava/expense-tracker
+Environment="PATH=/home/slava/expense-tracker/venv/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="PYTHONUNBUFFERED=1"
+# .env читает и сама программа (python-dotenv), но systemd гарантирует наличие
+# переменных окружения (в т.ч. TZ) даже при запуске из другого каталога.
+EnvironmentFile=-/home/slava/expense-tracker/.env
+ExecStart=/home/slava/expense-tracker/venv/bin/uvicorn app.web.routes:app --host 0.0.0.0 --port 8080
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

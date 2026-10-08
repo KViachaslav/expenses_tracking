@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>{% block title %}{{ app_title }}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='25' font-size='26'>💰</text></svg>">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap">
+      <div class="brand">💰 <span>{{ app_title }}</span></div>
+      <nav class="nav">
+        <a href="/" class="{% if active == 'dashboard' %}active{% endif %}">Дашборд</a>
+        <a href="/expenses" class="{% if active == 'expenses' %}active{% endif %}">Траты</a>
+        <a href="/reports" class="{% if active == 'reports' %}active{% endif %}">Отчёты</a>
+        <a href="/categories" class="{% if active == 'categories' %}active{% endif %}">Категории</a>
+        <a href="/users" class="{% if active == 'users' %}active{% endif %}">Семья</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    {% if request.query_params.get('msg') %}
+      <div class="flash">{{ request.query_params.get('msg') }}</div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="wrap">
+    Домашний учёт расходов · {{ currency }} · API: <a href="/api/docs">/api/docs</a>
+  </footer>
+
+  {# Локальная копия Chart.js в static/ имеет приоритет над CDN. #}
+  {% if chart_local %}
+    <script src="{{ url_for('static', path='chart.umd.min.js') }}"></script>
+  {% else %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  {% endif %}
+  {% block scripts %}{% endblock %}
+</body>
+</html>

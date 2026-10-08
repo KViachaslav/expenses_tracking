@@ -1,0 +1,153 @@
+/* Адаптивная вёрстка «Семейные расходы» (телефон в LAN -> планшет -> десктоп). */
+
+:root {
+  --bg: #f4f6fb;
+  --card: #ffffff;
+  --text: #1b2333;
+  --muted: #6b7590;
+  --accent: #3b6ef5;
+  --accent-soft: #e7eeff;
+  --ok: #1f9d55;
+  --warn: #d99a12;
+  --bad: #d64545;
+  --line: #e3e8f2;
+  --radius: 14px;
+  --shadow: 0 1px 2px rgba(20, 30, 60, .06), 0 6px 18px rgba(20, 30, 60, .06);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.45 "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.wrap { max-width: 1100px; margin: 0 auto; padding: 14px; }
+
+/* --- Шапка --- */
+.topbar {
+  position: sticky; top: 0; z-index: 10;
+  background: var(--card); border-bottom: 1px solid var(--line);
+}
+.topbar .wrap {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding-top: 10px; padding-bottom: 10px;
+}
+.brand { font-weight: 700; font-size: 17px; white-space: nowrap; }
+.brand span { color: var(--accent); }
+.nav { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+.nav a {
+  padding: 6px 11px; border-radius: 999px; color: var(--muted);
+  font-size: 14px; white-space: nowrap;
+}
+.nav a:hover { background: var(--accent-soft); color: var(--accent); text-decoration: none; }
+.nav a.active { background: var(--accent); color: #fff; }
+
+/* --- Заголовки --- */
+h1 { font-size: 21px; margin: 16px 0 10px; }
+h2 { font-size: 17px; margin: 22px 0 10px; }
+.sub { color: var(--muted); font-size: 13px; margin: -6px 0 12px; }
+
+/* --- Карточки-метрики --- */
+.cards {
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+}
+.card {
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 13px 15px; box-shadow: var(--shadow);
+}
+.card .label { color: var(--muted); font-size: 12.5px; text-transform: uppercase; letter-spacing: .04em; }
+.card .value { font-size: 22px; font-weight: 700; margin-top: 4px; white-space: nowrap; }
+.card .hint { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+.card.good .value { color: var(--ok); }
+.card.warn .value { color: var(--warn); }
+.card.bad .value { color: var(--bad); }
+
+/* --- Панели с графиками --- */
+.grid-2 { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.panel {
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 14px; box-shadow: var(--shadow); margin-top: 12px;
+}
+.panel h2 { margin: 0 0 10px; font-size: 16px; }
+.chart-box { position: relative; height: 260px; }
+.chart-box.tall { height: 300px; }
+
+/* --- Таблицы --- */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { color: var(--muted); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: .03em; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+tbody tr:hover { background: #fafbff; }
+tr.total-row td { font-weight: 700; border-top: 2px solid var(--line); }
+td.comment { white-space: normal; min-width: 140px; color: var(--muted); }
+.empty { color: var(--muted); text-align: center; padding: 22px 10px; }
+
+/* --- Формы и фильтры --- */
+form.inline { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+label { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 3px; }
+input[type="text"], input[type="number"], input[type="date"], input[type="month"], select, textarea {
+  width: 100%; padding: 8px 10px; font: inherit; color: var(--text); background: #fff;
+  border: 1px solid var(--line); border-radius: 10px; min-height: 38px;
+}
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+.field { min-width: 140px; flex: 1 1 140px; }
+.field.small { max-width: 130px; }
+button, .btn {
+  display: inline-block; padding: 9px 14px; min-height: 38px; font: inherit; font-weight: 600;
+  color: #fff; background: var(--accent); border: 0; border-radius: 10px; cursor: pointer;
+}
+button:hover, .btn:hover { filter: brightness(.94); text-decoration: none; }
+.btn-ghost { background: var(--accent-soft); color: var(--accent); }
+.btn-danger { background: var(--bad); }
+.btn-mini { padding: 5px 9px; min-height: 0; font-size: 13px; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+/* --- Бюджеты и полосы прогресса --- */
+.budget-row { margin: 10px 0; }
+.budget-row .line { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; }
+.budget-row .muted { color: var(--muted); font-size: 12.5px; }
+.bar { height: 9px; border-radius: 999px; background: var(--accent-soft); overflow: hidden; margin-top: 5px; }
+.bar > i { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+.bar.good > i { background: var(--ok); }
+.bar.warn > i { background: var(--warn); }
+.bar.bad > i { background: var(--bad); }
+
+/* --- Мелкие элементы --- */
+.badge {
+  display: inline-block; padding: 2px 8px; border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent); font-size: 12px;
+}
+.badge.bad { background: #fdecec; color: var(--bad); }
+.badge.dim { background: #eef0f6; color: var(--muted); }
+.flash {
+  background: #eaf7ef; border: 1px solid #bfe4cd; color: #14663c;
+  border-radius: var(--radius); padding: 10px 13px; margin: 12px 0; font-size: 14px;
+}
+.pager { display: flex; gap: 10px; align-items: center; justify-content: center; margin: 14px 0; }
+.muted { color: var(--muted); }
+.nowrap { white-space: nowrap; }
+.right { text-align: right; }
+footer { color: var(--muted); font-size: 12.5px; text-align: center; padding: 22px 0 30px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+@media (max-width: 560px) {
+  h1 { font-size: 19px; }
+  .card .value { font-size: 20px; }
+  .chart-box { height: 230px; }
+}
+
+@media print {
+  .topbar, .actions, form.inline, .pager { display: none; }
+  body { background: #fff; }
+  .panel, .card { box-shadow: none; }
+}
+
