@@ -20,7 +20,7 @@ from app.schemas import BudgetProgress, PeriodComparison
 from app.services import budgets as budgets_service
 from app.services import categories as categories_service
 from app.services import stats
-from app.services.expenses import add_expense, ensure_user
+from app.services.expenses import add_expense, add_metro_expense, ensure_user
 from app.timeutils import (
     day_bounds,
     month_bounds,
@@ -34,6 +34,7 @@ router = Router(name="expenses")
 
 # Тексты кнопок основного меню
 BTN_ADD = "➕ Добавить трату"
+BTN_METRO = "🚇 Метро 1.15"
 BTN_TODAY = "📊 Сегодня"
 BTN_MONTH = "📅 За месяц"
 BTN_TOP = "🏆 Топ категорий"
@@ -46,6 +47,8 @@ HELP_TEXT = (
     "🧾 <b>Быстрый ввод</b> — просто отправьте сообщение:\n"
     "   <code>500 продукты хлеб и молоко</code>\n"
     "   Сумма, категория (по названию или синониму) и комментарий.\n\n"
+    "🚇 <b>Метро 1.15</b> — кнопка меню: мгновенно записывает поездку\n"
+    "   на 1,15 в категорию «Транспорт».\n\n"
     "Команды:\n"
     "/add — пошаговое добавление траты\n"
     "/today — расходы за сегодня\n"
@@ -227,6 +230,15 @@ async def cmd_add(message: Message, state: FSMContext) -> None:
         "💵 Введите сумму траты (например <code>500</code> или <code>500,50</code>):",
         reply_markup=kb.cancel_menu(),
     )
+
+
+@router.message(F.text == BTN_METRO)
+async def cmd_metro(message: Message, session: Session, state: FSMContext) -> None:
+    """Кнопка быстрой записи поездки на метро фиксированной стоимости."""
+    await state.clear()  # кнопка работает и посреди пошагового ввода
+    user = _ensure_bot_user(message, session)
+    expense, category = add_metro_expense(session, user=user)
+    await message.answer(_saved_text(expense, category, user), reply_markup=kb.main_menu())
 
 
 # Отмена регистрируется ДО шагов FSM: иначе текст «❌ Отмена» попадёт в шаг ввода.

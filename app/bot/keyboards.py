@@ -23,9 +23,10 @@ def main_menu() -> ReplyKeyboardMarkup:
     """Основное меню (нижняя клавиатура)."""
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="➕ Добавить трату"), KeyboardButton(text="📊 Сегодня")],
-            [KeyboardButton(text="📅 За месяц"), KeyboardButton(text="🏆 Топ категорий")],
-            [KeyboardButton(text="🗂 Категории"), KeyboardButton(text="❓ Помощь")],
+            [KeyboardButton(text="➕ Добавить трату"), KeyboardButton(text="🚇 Метро 1.15")],
+            [KeyboardButton(text="📊 Сегодня"), KeyboardButton(text="📅 За месяц")],
+            [KeyboardButton(text="🏆 Топ категорий"), KeyboardButton(text="🗂 Категории")],
+            [KeyboardButton(text="❓ Помощь")],
         ],
         resize_keyboard=True,
         input_field_placeholder="Например: 500 продукты хлеб",

@@ -67,7 +67,7 @@ def db_check() -> str:
     from app.database import Base, init_db
     from app.services import stats
     from app.services.categories import list_categories, parser_keywords
-    from app.services.expenses import add_expense, ensure_user
+    from app.services.expenses import add_expense, add_metro_expense, ensure_user
     from app.timeutils import month_bounds
 
     engine = create_engine("sqlite:///:memory:", future=True)
@@ -81,12 +81,18 @@ def db_check() -> str:
         assert len(categories) == 8, len(categories)
         assert parser_keywords(session)
         add_expense(session, user=user, category=categories[0], amount=1500, comment="проверка")
+        metro, metro_category = add_metro_expense(session, user=user)
+        assert metro.amount == 1.15, metro
+        assert metro_category.name == "Транспорт", metro_category
         session.commit()
         summary = stats.summary(session, *month_bounds())
         totals = stats.category_totals(session, *month_bounds())
-        assert summary.total == 1500, summary
+        assert summary.total == 1501.15, summary
         assert totals and totals[0].title
-    return f"категорий: {len(categories)}, итог месяца: {summary.total}, топ: {totals[0].title}"
+    return (
+        f"категорий: {len(categories)}, итог месяца: {summary.total}, "
+        f"топ: {totals[0].title}, метро: {metro.amount} → {metro_category.title}"
+    )
 
 
 def main() -> int:

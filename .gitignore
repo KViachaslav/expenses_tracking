@@ -26,6 +26,10 @@ backups/
 # --- Логи (например, validate_bot.log от devcheck_bot.py) ---
 *.log
 
+# --- Личные выгрузки для импорта (import_csv.py) ---
+common_sell.csv
+imports/
+
 # --- IDE / OS ---
 .idea/
 .vscode/

@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.config import settings
 from app.models import Category, Expense, User
+from app.services.categories import create_category, find_category
 from app.timeutils import local_now
 
 
@@ -90,6 +91,32 @@ def add_expense(
     session.add(expense)
     session.flush()
     return expense
+
+
+# Стоимость одной поездки на метро для быстрой кнопки в боте.
+METRO_AMOUNT = 1.15
+METRO_CATEGORY_NAME = "Транспорт"
+METRO_COMMENT = "Метро"
+
+
+def add_metro_expense(session: Session, *, user: User) -> tuple[Expense, Category]:
+    """Мгновенно записывает поездку на метро (кнопка «🚇 Метро 1.15» в боте)."""
+    category = find_category(session, METRO_CATEGORY_NAME)
+    if category is None:
+        category = create_category(
+            session,
+            METRO_CATEGORY_NAME,
+            emoji="🚌",
+            synonyms="транспорт,метро,проезд",
+        )
+    expense = add_expense(
+        session,
+        user=user,
+        category=category,
+        amount=METRO_AMOUNT,
+        comment=METRO_COMMENT,
+    )
+    return expense, category
 
 
 def delete_expense(session: Session, expense: Expense) -> None:

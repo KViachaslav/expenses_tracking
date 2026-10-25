@@ -104,3 +104,29 @@ def test_expense_repr_and_relationships(session: Session, add_expense, user, cat
     assert "User" in repr(user)
     assert "Category" in repr(categories["Продукты"])
     assert expense in user.expenses
+
+
+def test_add_metro_expense_uses_transport_category(session: Session, user, categories) -> None:
+    expense, category = expenses_service.add_metro_expense(session, user=user)
+    session.commit()
+
+    assert expenses_service.METRO_AMOUNT == 1.15
+    assert category.name == "Транспорт"
+    assert expense.category_id == categories["Транспорт"].id
+    assert expense.amount == 1.15
+    assert expense.comment == "Метро"
+    assert expense.currency == "BYN"
+
+
+def test_add_metro_expense_creates_transport_category(session: Session, user, categories) -> None:
+    session.delete(categories["Транспорт"])
+    session.flush()
+
+    expense, category = expenses_service.add_metro_expense(session, user=user)
+    session.commit()
+
+    assert category.name == "Транспорт"
+    assert "метро" in category.keyword_list
+    assert expense.amount == 1.15
+    assert expense.spent_at <= local_now()
+
